@@ -78,6 +78,8 @@ ALERT_EMAIL = os.getenv("ALERT_EMAIL", SMTP_USER)
 
 ADZUNA_APP_ID  = os.getenv("ADZUNA_APP_ID", "")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "")
+JSEARCH_API_KEY = os.getenv("JSEARCH_API_KEY", "")
+SERPAPI_KEY     = os.getenv("SERPAPI_KEY", "")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -299,6 +301,69 @@ def fetch_adzuna():
                 jobs.append(job(j["title"], j.get("company",{}).get("display_name",""),
                     j.get("location",{}).get("display_name",""),
                     j.get("redirect_url",""), "Adzuna", j.get("created","")))
+    return jobs
+
+
+def fetch_jsearch():
+    jobs = []
+    if not JSEARCH_API_KEY:
+        return jobs
+    headers = {
+        "X-RapidAPI-Key": JSEARCH_API_KEY,
+        "X-RapidAPI-Host": "jsearch.p.rapidapi.com"
+    }
+    for query in ["data engineer USA", "analytics engineer USA", "etl engineer USA"]:
+        r = safe_get(
+            "https://jsearch.p.rapidapi.com/search",
+            params={"query": query, "page": "1", "num_results": "10",
+                    "date_posted": "today"},
+            headers=headers
+        )
+        if r:
+            try:
+                for j in r.json().get("data", []):
+                    if is_relevant(j.get("job_title", "")):
+                        jobs.append(job(
+                            j["job_title"],
+                            j.get("employer_name", ""),
+                            f"{j.get('job_city','')}, {j.get('job_state','')}".strip(", "),
+                            j.get("job_apply_link", j.get("job_google_link", "")),
+                            "JSearch",
+                            j.get("job_posted_at_datetime_utc", "")
+                        ))
+            except Exception:
+                pass
+    return jobs
+
+def fetch_serpapi_google_jobs():
+    jobs = []
+    if not SERPAPI_KEY:
+        return jobs
+    for query in ["data engineer USA", "analytics engineer USA"]:
+        r = safe_get(
+            "https://serpapi.com/search",
+            params={
+                "engine": "google_jobs",
+                "q": query,
+                "location": "United States",
+                "chips": "date_posted:today",
+                "api_key": SERPAPI_KEY
+            }
+        )
+        if r:
+            try:
+                for j in r.json().get("jobs_results", []):
+                    if is_relevant(j.get("title", "")):
+                        jobs.append(job(
+                            j["title"],
+                            j.get("company_name", ""),
+                            j.get("location", ""),
+                            j.get("related_links", [{}])[0].get("link", ""),
+                            "Google Jobs (SerpApi)",
+                            j.get("detected_extensions", {}).get("posted_at", "")
+                        ))
+            except Exception:
+                pass
     return jobs
 
 def fetch_wellfound():
@@ -708,6 +773,44 @@ def fetch_workday_bulk():
         ("3m",               "3m",                      5,  "3M"),
         ("caterpillar",      "caterpillar",             5,  "Caterpillar"),
         ("emerson",          "emerson",                 5,  "Emerson Electric"),
+        ("libertymutual",    "libertymutual",           5,  "Liberty Mutual"),
+        ("statestreet",      "statestreet",             5,  "State Street"),
+        ("biogen",           "biogen",                  5, "Biogen"),
+        ("lyft",              "lyft",              5,  "Lyft"),           # SF
+        ("twitter",           "twitter",           5,  "Twitter/X"),      # SF
+        ("gap",               "gap",               5,  "Gap"),            # SF
+        ("levi",              "levistrauss",       5,  "Levi Strauss"),   # SF
+        ("williamsonoma",     "williamsonoma",     5,  "Williams-Sonoma"),# SF
+        ("McKesson",          "mckesson",          5,  "McKesson"),       # SF
+        ("chevron",           "chevron",           5,  "Chevron"),        # SF
+        ("wells",             "wellsfargo",        5,  "Wells Fargo"),    # SF
+        ("gap",               "gap",               5,  "Gap Inc"),        # SF
+        ("sanfrancisco",      "uber",              5,  "Uber"),           # SF
+        ("airbnb2",           "airbnb",            5,  "Airbnb WD"),      # SF
+        ("splunk2",           "splunk",            5,  "Splunk WD"),      # SF
+        ("pagerduty2",        "pagerduty",         5,  "PagerDuty WD"),   # SF
+        ("pinterest2",        "pinterest",         5,  "Pinterest WD"),   # SF
+        ("cloudera",          "cloudera",          5,  "Cloudera"),       # Santa Clara
+        ("agilent",           "agilent",           5,  "Agilent"),        # Santa Clara
+        ("intuit2",           "intuit",            5,  "Intuit WD"),      # Mountain View
+        ("synopsys",          "synopsys",          5,  "Synopsys"),       # Sunnyvale
+        ("juniper",           "juniper",           5,  "Juniper Networks"),# Sunnyvale
+        ("yahoo",             "yahooinc",          5,  "Yahoo"),          # Sunnyvale
+        ("astrazeneca",       "astrazeneca",       5,  "AstraZeneca"),    # San Diego
+        ("illumina",          "illumina",          5,  "Illumina"),       # San Diego
+        ("kyocera",           "kyocera",           5,  "Kyocera"),        # San Diego
+        ("tanium",            "tanium",            5,  "Tanium"),         # Kirkland/Remote
+        ("rubrik",            "rubrik",            5,  "Rubrik"),         # Palo Alto
+        ("cohesity",          "cohesity",          5,  "Cohesity"),       # San Jose
+        ("cloudflarewkd",     "cloudflare",        5,  "Cloudflare WD"),  # SF
+        ("ringcentral",       "ringcentral",       5,  "RingCentral"),    # Belmont
+        ("guidewire",         "guidewire",         5,  "Guidewire"),      # San Mateo
+        ("roamresearch",      "roamresearch",      5,  "Roam Research"),  # Remote/CA
+        ("lam",               "lamresearch",       5,  "Lam Research"),   # Fremont
+        ("kla",               "kla",               5,  "KLA"),            # Milpitas
+        ("teradyne",          "teradyne",          5,  "Teradyne"),       # N. Reading MA
+        ("maxlinear",         "maxlinear",         5,  "MaxLinear"),      # Carlsbad
+        ("websense",          "forcepoint",        5,  "Forcepoint"),     # Austin/CA
     ]
     jobs = []
     with ThreadPoolExecutor(max_workers=25) as pool:
@@ -764,6 +867,52 @@ def fetch_greenhouse_bulk():
         ("wayfair","Wayfair (GH)"),("chewy","Chewy"),
         ("grubhub","Grubhub"),("yelp","Yelp"),
         ("duolingo","Duolingo (GH)"),("pinterest","Pinterest"),
+        ("rapid7", "Rapid7"),
+        ("toasttab", "Toast"),
+        ("draftkings", "DraftKings"),
+        ("reddit",            "Reddit"),           # SF
+        ("figma",             "Figma"),            # SF
+        ("notion",            "Notion"),           # SF - already in but verify
+        ("mixpanel",          "Mixpanel"),         # SF
+        ("zendesk2",          "Zendesk GH"),       # SF
+        ("okta2",             "Okta GH"),          # SF
+        ("box2",              "Box GH"),           # Redwood City
+        ("zuora2",            "Zuora GH"),         # Redwood City
+        ("appdynamics",       "AppDynamics"),      # SF
+        ("mulesoft",          "MuleSoft"),         # SF
+        ("heroku",            "Heroku"),           # SF
+        ("samsara",           "Samsara"),          # SF
+        ("verkada",           "Verkada"),          # San Mateo
+        ("benchling",         "Benchling"),        # SF
+        ("carta",             "Carta"),            # SF
+        ("ripple",            "Ripple"),           # SF
+        ("chime2",            "Chime GH"),         # SF
+        ("opendoor2",         "Opendoor GH"),      # SF
+        ("faire2",            "Faire GH"),         # SF
+        ("flexport",          "Flexport"),         # SF
+        ("convoy",            "Convoy"),           # Seattle/Remote
+        ("nerdwallet2",       "NerdWallet GH"),    # SF
+        ("thumbtack",         "Thumbtack"),        # SF
+        ("procore",           "Procore"),          # Carpinteria
+        ("servicetitan",      "ServiceTitan"),     # Glendale
+        ("applovin",          "AppLovin"),         # Palo Alto
+        ("lucidmotors",       "Lucid Motors"),     # Newark
+        ("rivian",            "Rivian"),           # Irvine
+        ("jobyaviation",      "Joby Aviation"),    # Santa Cruz
+        ("nuro",              "Nuro"),             # Mountain View
+        ("waymo",             "Waymo"),            # Mountain View
+        ("cruise",            "Cruise"),           # SF
+        ("zoox",              "Zoox"),             # Foster City
+        ("aurora",            "Aurora"),           # Pittsburgh/Remote
+        ("driveway",          "Driveway"),         # Portland/Remote
+        ("vanta",             "Vanta"),            # SF
+        ("drata",             "Drata"),            # Remote/SD
+        ("secureframe",       "Secureframe"),      # SF
+        ("launchdarkly2",     "LaunchDarkly GH"),  # Oakland
+        ("split",             "Split Software"),   # Redwood City
+        ("statsig",           "Statsig"),          # Bellevue/Remote
+        ("eppo",              "Eppo"),             # SF
+        ("growthbook",        "GrowthBook"),       # SF/Remote
     ]
     jobs = []
     with ThreadPoolExecutor(max_workers=25) as pool:
@@ -800,6 +949,26 @@ def fetch_lever_bulk():
         ("newrelic","New Relic"),("sumologic","Sumo Logic"),
         ("papertrail","Papertrail"),("loggly","Loggly"),
         ("veritone","Veritone"),("primer","Primer AI"),
+        ("lyft2",             "Lyft Lever"),
+        ("doordash2",         "DoorDash Lever"),
+        ("robinhood2",        "Robinhood Lever"),
+        ("coinbase2",         "Coinbase Lever"),
+        ("plaid2",            "Plaid Lever"),
+        ("gusto2",            "Gusto Lever"),
+        ("hippo",             "Hippo Insurance"),
+        ("lemonade",          "Lemonade"),
+        ("marqeta",           "Marqeta"),
+        ("affirm",            "Affirm"),
+        ("afterpay",          "Afterpay"),
+        ("klarna",            "Klarna"),
+        ("chime3",            "Chime Lever"),
+        ("dave",              "Dave"),
+        ("current",           "Current"),
+        ("mercury",           "Mercury"),
+        ("column",            "Column"),
+        ("modern-treasury",   "Modern Treasury"),
+        ("lithic",            "Lithic"),
+        ("highnote",          "Highnote"),
     ]
     jobs = []
     with ThreadPoolExecutor(max_workers=20) as pool:
@@ -833,6 +1002,26 @@ def fetch_ashby_bulk():
         ("superb-ai","Superb AI"),("encord","Encord"),
         ("aquarium","Aquarium"),("galileo","Galileo"),
         ("arthur","Arthur AI"),("fiddler","Fiddler (Ashby)"),
+        ("groq",              "Groq"),
+        ("lambda",            "Lambda Labs"),
+        ("coreweave",         "CoreWeave"),
+        ("vast",              "Vast Data"),
+        ("modal",             "Modal"),
+        ("replicate",         "Replicate"),
+        ("huggingface",       "Hugging Face"),
+        ("cohere2",           "Cohere Ashby"),
+        ("adept",             "Adept AI"),
+        ("inflection",        "Inflection AI"),
+        ("xai",               "xAI"),
+        ("moonhub",           "Moonhub"),
+        ("imbue",             "Imbue"),
+        ("characterai",       "Character.AI"),
+        ("pika",              "Pika Labs"),
+        ("runway",            "Runway ML"),
+        ("stability",         "Stability AI"),
+        ("midjourney",        "Midjourney"),
+        ("elevenlabs",        "ElevenLabs"),
+        ("synthesia",         "Synthesia"),
     ]
     jobs = []
     with ThreadPoolExecutor(max_workers=15) as pool:
@@ -906,19 +1095,22 @@ ALL_SOURCES = [
     ("Lever (50+ companies)",         fetch_lever_bulk),
     ("Ashby (40+ companies)",         fetch_ashby_bulk),
     ("SmartRecruiters (25+ companies)", fetch_smartrecruiters_bulk),
+    ("JSearch (Indeed+LinkedIn+Glassdoor)", fetch_jsearch),
+    ("Google Jobs (SerpApi)",               fetch_serpapi_google_jobs),
 ]
 
 # ─────────────────────────────────────────────────────────
 # NOTIFICATIONS
 # ─────────────────────────────────────────────────────────
-
+        
 def send_desktop(j: dict):
     if not DESKTOP_AVAILABLE:
         return
     try:
+        title = f"{j['title']}"[:63]
         desktop_notify.notify(
-            title=f"🚨 {j['title']}",
-            message=f"{j['company']} | {j['location'] or 'See posting'}\n{j['source']}",
+            title=title,
+            message=f"{j['company']} | {j['source']}",
             timeout=10)
     except Exception:
         pass
