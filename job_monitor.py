@@ -1078,7 +1078,7 @@ ALL_SOURCES = [
     ("RemoteOK",               fetch_remoteok),
     ("Himalayas",              fetch_himalayas),
     ("USAJobs",                fetch_usajobs),
-    ("Adzuna",                 fetch_adzuna),
+ #   ("Adzuna",                 fetch_adzuna),
     ("Wellfound/AngelList",    fetch_wellfound),
     ("YC Work at a Startup",   fetch_yc_jobs),
     ("LinkedIn",               fetch_linkedin_jobs),
