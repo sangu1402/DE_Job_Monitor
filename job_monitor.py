@@ -499,6 +499,22 @@ def fetch_meta():
                         "Meta Careers", ""))
     return jobs
 
+def fetch_tesla():
+    jobs = []
+    r = safe_get("https://www.tesla.com/cua-api/talentbridge/postings"
+                 "?query=data+engineer&country=US&limit=50")
+    if r:
+        try:
+            for j in r.json().get("results", []):
+                if is_relevant(j.get("title", "")):
+                    jobs.append(job(j["title"], "Tesla",
+                        j.get("location", {}).get("city", ""),
+                        f"https://www.tesla.com/careers/search/job/{j.get('id','')}",
+                        "Tesla Careers", j.get("posted_at", "")))
+        except Exception:
+            pass
+    return jobs
+
 def fetch_ibm():
     jobs = []
     r = safe_get("https://careers.ibm.com/api/apply/v2/jobs?"
@@ -881,6 +897,7 @@ ALL_SOURCES = [
     ("Google Careers",         fetch_google),
     ("Microsoft Careers",      fetch_microsoft),
     ("Meta Careers",           fetch_meta),
+    ("Tesla Careers",          fetch_tesla),
     ("IBM Careers",            fetch_ibm),
     ("Oracle Careers",         fetch_oracle),
     # Bulk ATS Platform Scanners
