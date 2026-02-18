@@ -44,6 +44,10 @@ from email.mime.multipart import MIMEMultipart
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
+
 try:
     from plyer import notification as desktop_notify
     DESKTOP_AVAILABLE = True
@@ -78,7 +82,10 @@ ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "")
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()]
+    handlers=[
+        logging.FileHandler(LOG_FILE, encoding='utf-8'),
+        logging.StreamHandler(open(sys.stdout.fileno(), mode='w', encoding='utf-8', closefd=False))
+    ]
 )
 log = logging.getLogger(__name__)
 
