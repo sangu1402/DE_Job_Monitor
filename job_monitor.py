@@ -80,6 +80,7 @@ ADZUNA_APP_ID  = os.getenv("ADZUNA_APP_ID", "")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "")
 JSEARCH_API_KEY = os.getenv("JSEARCH_API_KEY", "")
 SERPAPI_KEY     = os.getenv("SERPAPI_KEY", "")
+BLOCKED_COMPANIES = {"Lensa", "Jobs via Dice", "Arbor Tek Systems"}
 
 logging.basicConfig(
     level=logging.INFO,
@@ -1157,6 +1158,19 @@ def send_email(jobs: list):
 # CORE LOOP
 # ─────────────────────────────────────────────────────────
 
+from dateutil import parser as dparser
+
+def is_fresh(posted_str, hours=24):
+    if not posted_str:
+        return True
+    try:
+        posted = dparser.parse(posted_str)
+        if posted.tzinfo is None:
+            posted = posted.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) - posted < timedelta(hours=hours)
+    except Exception:
+        return True
+
 def check_and_notify():
     log.info(f"🔍 Scanning {len(ALL_SOURCES)} sources in parallel...")
     seen = load_seen()
@@ -1173,9 +1187,13 @@ def check_and_notify():
                     jid = make_id(j["source"], j["url"])
                     if jid not in seen:
                         seen.add(jid)
+                        if j.get("company") in BLOCKED_COMPANIES:
+                            continue
+                        if not is_fresh(j.get("posted_at", ""), hours=24):
+                            continue
                         new_jobs.append(j)
                         log.info(f"  🆕 [{j['source']}] {j['title']} @ {j['company']}")
-                        send_desktop(j)   # Instant popup per job
+                        send_desktop(j)
             except Exception as ex:
                 log.debug(f"  ✗ {name}: {ex}")
 
