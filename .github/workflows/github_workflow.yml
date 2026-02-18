@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - run: pip install requests feedparser plyer schedule python-dotenv
+      - run: pip install requests feedparser plyer schedule python-dotenv python-dateutil
 
       - name: Restore seen-jobs state
         uses: actions/cache@v4
