@@ -100,6 +100,10 @@ log = logging.getLogger(__name__)
 
 SESSION = requests.Session()
 SESSION.headers.update({"User-Agent": "Mozilla/5.0 JobMonitor/5.2"})
+# Increase connection pool size to match thread workers and avoid pool-full warnings
+adapter = requests.adapters.HTTPAdapter(pool_connections=50, pool_maxsize=50)
+SESSION.mount("https://", adapter)
+SESSION.mount("http://", adapter)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # STRICT US LOCATION FILTERING
@@ -599,7 +603,7 @@ _WD_US_GUID = "bc33aa3152ec42d4995f4791a106ed09"
 
 def _workday(tenant, board, wd_ver, company_name):
     """Fetch jobs from a Workday tenant.
-    US-filtered server-side via country GUID — then double-checked client-side."""
+    US-filtered server-side via country GUID + STRICT client-side title/loc check."""
     jobs = []
     url = (f"https://{tenant}.wd{wd_ver}.myworkdayjobs.com"
            f"/wday/cxs/{tenant}/{board}/jobs")
@@ -611,15 +615,32 @@ def _workday(tenant, board, wd_ver, company_name):
     if r:
         try:
             for j in r.json().get("jobPostings", []):
-                if not is_relevant(j.get("title","")):
+                title = j.get("title","")
+                if not is_relevant(title):
+                    continue
+                # Some Workday tenants (e.g. PwC) ignore the GUID filter —
+                # catch India/non-US jobs by checking title prefixes and location
+                title_low = title.lower()
+                if any(x in title_low for x in ["_noida", "_bangalore", "_hyderabad",
+                        "_mumbai", "_pune", "_india", " - india", "(india)"]):
+                    log.debug(f"  FILTERED (non-US title): [Workday/{company_name}] {title}")
+                    continue
+                # Also check the IN_ prefix pattern PwC uses for India roles
+                if re.match(r'^IN_', title):
+                    log.debug(f"  FILTERED (IN_ prefix): [Workday/{company_name}] {title}")
                     continue
                 locs = j.get("locations",[])
                 loc  = locs[0].get("type","") if locs else ""
+                # If location string is present and non-US, reject
+                if loc and not is_us_location(loc) and loc.lower() not in (
+                    "on-site", "hybrid", "remote", "flexible"
+                ):
+                    log.debug(f"  FILTERED (non-US loc): [Workday/{company_name}] {title} | {loc}")
+                    continue
                 ext  = j.get("externalPath","")
                 jurl = (f"https://{tenant}.wd{wd_ver}.myworkdayjobs.com"
                         f"/en-US/{board}{ext}") if ext else ""
-                # Server-side GUID filter is strong — accept even blank loc
-                jobs.append(job(j["title"], company_name, loc,
+                jobs.append(job(title, company_name, loc,
                     jurl, f"Workday/{company_name}", j.get("postedOn","")))
         except Exception:
             pass
