@@ -1127,7 +1127,7 @@ def fetch_workday_bulk():
         ("kpmg",              "kpmg",                      5,  "KPMG"),
         ("gartner",           "EXT",                       5,  "Gartner"),
         ("huron",             "huroncareers",              1,  "Huron Consulting"),
-        ("cnx",               "external_global",           1,  "Cognizant"),
+        ("cnx",               "external_global",           1,  "Concentrix"),
         ("capgemini",         "capgemini",                 5,  "Capgemini"),
         ("dxctechnology",     "DXCJobs",                   1,  "DXC Technology"),
         # ── Defense & Gov Contractors ──────────────────────────────────────────
