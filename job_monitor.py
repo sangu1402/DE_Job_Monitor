@@ -1503,7 +1503,7 @@ def send_email(jobs: list):
             log.warning("Email not configured — set SMTP_USER and SMTP_PASS in .env")
         return
     n       = len(jobs)
-    subject = f"🚨 {n} New Data Engineer Job{'s' if n>1 else ''} — Apply NOW (first 10!)"
+    subject = f"🚨 {n} Github - New Data Engineer Job{'s' if n>1 else ''} — Apply NOW (first 10!)"
     html    = (f"<html><body style='font-family:Arial,sans-serif;max-width:720px;margin:auto'>"
                f"<h2 style='color:#1a73e8'>🚨 {n} New Data Engineer Job{'s' if n>1 else ''}</h2>"
                f"<p style='color:#666'>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
