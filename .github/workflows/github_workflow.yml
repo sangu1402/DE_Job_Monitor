@@ -27,6 +27,19 @@ jobs:
           key: workday-seen-${{ github.run_id }}
           restore-keys: workday-seen-
 
+      - name: Test Workday API directly
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"appliedFacets":{},"limit":5,"offset":0,"searchText":"data engineer"}' \
+            "https://walmart.wd5.myworkdayjobs.com/wday/cxs/walmart/WalmartExternal/jobs"
+          echo ""
+          curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"appliedFacets":{},"limit":5,"offset":0,"searchText":"data engineer"}' \
+            "https://walmart.wd5.myworkdayjobs.com/wday/cxs/walmart/WalmartExternal/jobs" | head -c 200
+          echo ""
+
       - name: Run Workday Monitor
         env:
           SMTP_USER: ${{ secrets.SMTP_USER }}
