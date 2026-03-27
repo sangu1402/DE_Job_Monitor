@@ -59,7 +59,6 @@ log = logging.getLogger(__name__)
 # Dedicated Session for Workday only - not shared with any other source
 WD_SESSION = requests.Session()
 WD_SESSION.headers.update({
-    "Content-Type": "application/json",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 })
 
