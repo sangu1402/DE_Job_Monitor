@@ -106,6 +106,8 @@ def _workday(tenant, board, wd_ver, company_name):
         try:
             data = r.json()
             total = data.get("total", 0)
+            if total > 0 and offset == 0:
+                log.info(f"  [WD] {company_name}: {total} total jobs")
             for j in data.get("jobPostings", []):
                 title = j.get("title","")
                 if not is_relevant(title):
