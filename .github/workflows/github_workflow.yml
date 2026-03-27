@@ -1,46 +1,50 @@
-name: Data Engineer Job Monitor v3
+name: Workday Job Monitor
 
 on:
   schedule:
-    - cron: '*/5 * * * *'   # Every 5 minutes (GitHub minimum)
-  workflow_dispatch:
+    - cron: '*/5 * * * *'  # Every 5 minutes
+  workflow_dispatch:        # Manual trigger
 
 jobs:
-  monitor:
+  scan:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
-      - run: pip install requests feedparser plyer schedule python-dotenv python-dateutil
+      - name: Install dependencies
+        run: pip install requests python-dotenv schedule plyer feedparser python-dateutil
 
-      - name: Restore seen-jobs state
+      - name: Restore seen jobs
         uses: actions/cache@v4
         with:
-          path: seen_jobs.json
-          key: seen-${{ github.run_number }}
-          restore-keys: seen-
+          path: workday_seen_jobs.json
+          key: workday-seen-${{ github.run_id }}
+          restore-keys: workday-seen-
 
-      - name: Run monitor (single scan)
+      - name: Run Workday Monitor
         env:
-          SMTP_USER:       ${{ secrets.SMTP_USER }}
-          SMTP_PASS:       ${{ secrets.SMTP_PASS }}
-          ALERT_EMAIL:     ${{ secrets.ALERT_EMAIL }}
-          ADZUNA_APP_ID:   ${{ secrets.ADZUNA_APP_ID }}
-          ADZUNA_APP_KEY:  ${{ secrets.ADZUNA_APP_KEY }}
-        run: python job_monitor.py --once
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+        run: python workday_monitor.py --once
 
-      - name: Commit seen-jobs state
+      - name: Save seen jobs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workday-seen-jobs
+          path: workday_seen_jobs.json
+          retention-days: 30
+
+      - name: Commit seen jobs
+        if: always()
         run: |
-          git config user.name  "Job Monitor Bot"
-          git config user.email "bot@github.com"
-          git add seen_jobs.json || true
-          git diff --staged --quiet || git commit -m "chore: update seen jobs"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add workday_seen_jobs.json || true
+          git diff --staged --quiet || git commit -m "Update workday seen jobs [skip ci]"
           git push || true
