@@ -101,7 +101,7 @@ def _workday(tenant, board, wd_ver, company_name):
     for offset in [0, 50]:
         payload = {"appliedFacets": {}, "limit": 50, "offset": offset, "searchText": "data engineer"}
         try:
-            r = session.post(url, json=payload, timeout=15)
+            r = session.post(url, data=json.dumps(payload), headers={"Content-Type": "application/json"}, timeout=15)
             if r.status_code != 200:
                 if company_name in ("Walmart", "Adobe", "Cisco"):
                     log.info(f"  [WD] {company_name}: status {r.status_code}, body={r.text[:200]}")
