@@ -94,10 +94,14 @@ NON_US_LOCATIONS = [
 def _workday(tenant, board, wd_ver, company_name):
     jobs = []
     url = f"https://{tenant}.wd{wd_ver}.myworkdayjobs.com/wday/cxs/{tenant}/{board}/jobs"
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    })
     for offset in [0, 50]:
         payload = {"appliedFacets": {}, "limit": 50, "offset": offset, "searchText": "data engineer"}
         try:
-            r = WD_SESSION.post(url, json=payload, timeout=15)
+            r = session.post(url, json=payload, timeout=15)
             if r.status_code != 200:
                 log.info(f"  [WD] {company_name}: status {r.status_code}")
                 break
